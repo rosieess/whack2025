@@ -10,11 +10,38 @@ void main() {
 // Global state to store the user's goal
 class AppState extends ChangeNotifier {
   String _userGoal = 'Create a beginner full-body workout plan';
+  List<Exercise>? _cachedExercises;
+  List<Exercise> _completedExercises = [];
 
   String get userGoal => _userGoal;
+  List<Exercise>? get cachedExercises => _cachedExercises;
+  List<Exercise> get completedExercises => _completedExercises;
 
   void setGoal(String newGoal) {
     _userGoal = newGoal;
+    notifyListeners();
+  }
+
+  void setCachedExercises(List<Exercise> exercises) {
+    _cachedExercises = exercises;
+    notifyListeners();
+  }
+
+  void markExerciseComplete(Exercise exercise) {
+    _completedExercises.add(exercise);
+    notifyListeners();
+  }
+
+  bool isExerciseCompleted(Exercise exercise) {
+    return _completedExercises.any((e) => 
+      e.day == exercise.day && 
+      e.exercise == exercise.exercise
+    );
+  }
+
+  void clearWorkout() {
+    _cachedExercises = null;
+    _completedExercises.clear();
     notifyListeners();
   }
 }
@@ -207,7 +234,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
       // Show confirmation
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Goal saved! Start a new workout to work towards this goal 💪'),
+          content: Text('Goal saved! Generate a new workout to use this goal.'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -399,7 +426,7 @@ class Exercise {
     required this.day,
     required this.exercise,
     this.sets,
-    required this.reps,
+    this.reps,
     this.notes,
   });
 
@@ -434,6 +461,7 @@ class WorkoutPage extends StatefulWidget {
 
 class _WorkoutPageState extends State<WorkoutPage> {
   late Future<List<Exercise>> exercisesFuture;
+  List<Exercise> completedExercises = [];
 
   @override
   void initState() {
@@ -441,23 +469,41 @@ class _WorkoutPageState extends State<WorkoutPage> {
     exercisesFuture = getExercises();
   }
 
+  void _markAsDone(Exercise exercise) {
+    setState(() {
+      completedExercises.add(exercise);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${exercise.exercise} completed! 🎉'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  bool _isCompleted(Exercise exercise) {
+    return completedExercises.contains(exercise);
+  }
+
   Future<List<Exercise>> getExercises() async {
     try {
-      // CHANGE THIS BASED ON YOUR SETUP:
-      // - Web/Desktop: http://127.0.0.1:8000/api/generate_plan
-      // - Android Emulator: http://10.0.2.2:8000/api/generate_plan
-      // - Physical Device: http://YOUR_COMPUTER_IP:8000/api/generate_plan
       const url = "http://127.0.0.1:8000/api/generate_plan";
       
       print('🔄 Fetching workout from: $url');
-      print('📝 Using goal: ${appState.userGoal}');
+      print('📝 Sending goal to API: ${appState.userGoal}');
+      
+      final requestBody = json.encode({
+        'user_input': appState.userGoal
+      });
+      
+      print('📤 Request body: $requestBody');
       
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_input': appState.userGoal  // Using the saved goal!
-        }),
+        body: requestBody,
       );
       
       print('📡 Response status: ${response.statusCode}');
@@ -467,7 +513,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final plan = responseData['plan'];
         
-        // Extract all sessions from all weeks
         List<Exercise> allExercises = [];
         if (plan['weeks'] != null) {
           for (var week in plan['weeks']) {
@@ -575,58 +620,122 @@ class _WorkoutPageState extends State<WorkoutPage> {
                       );
                     } else {
                       final exercises = snapshot.data!;
+                      final activeExercises = exercises.where((ex) => !_isCompleted(ex)).toList();
+                      
+                      if (activeExercises.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                size: 80,
+                                color: Colors.green,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'All exercises completed!',
+                                style: GoogleFonts.abrilFatface(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Great job! 💪',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
                       return ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: exercises.length,
+                        itemCount: activeExercises.length,
                         itemBuilder: (context, index) {
-                          final exercise = exercises[index];
+                          final exercise = activeExercises[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             elevation: 2,
                             child: Padding(
                               padding: const EdgeInsets.all(12),
-                              child: Column(
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    exercise.day,
-                                    style: GoogleFonts.abrilFatface(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.deepPurple,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          exercise.day,
+                                          style: GoogleFonts.abrilFatface(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.deepPurple,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          exercise.exercise,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (exercise.sets != null || exercise.reps != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              '${exercise.sets ?? '-'} sets × ${exercise.reps ?? '-'} reps',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ),
+                                        if (exercise.notes != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              exercise.notes!,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[600],
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    exercise.exercise,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () => _markAsDone(exercise),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Done',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                  if (exercise.sets != null || exercise.reps != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        '${exercise.sets ?? '-'} sets × ${exercise.reps ?? '-'} reps',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                    ),
-                                  if (exercise.notes != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        exercise.notes!,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey[600],
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
