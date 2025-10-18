@@ -13,12 +13,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Workout App',
       theme: ThemeData(
+        textTheme: GoogleFonts.abrilFatfaceTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const MyHomePage(title: 'Workout App'),
     );
   }
 }
+
+// ------------------ Home Page ------------------
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key, required this.title});
@@ -28,108 +31,113 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.deepPurple[100], // pale purple
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 250,
+        flexibleSpace: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+          child: Image.asset(
+            'assets/rectanglelogo.png',
+            fit: BoxFit.cover,
           ),
         ),
-        backgroundColor: Colors.deepPurple,
       ),
-      body: Padding(
-        padding: const EdgeInsets.only(top: 80),
+      body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min, // only take space needed
           children: [
             // Workout button
-            Center(
-              child: Container(
-                width: 300,
-                height: 100,
-                margin: const EdgeInsets.only(bottom: 20), // space between buttons
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.4),
-                      spreadRadius: 3,
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    textStyle: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+            Container(
+              width: 300,
+              height: 100,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepPurple.withOpacity(0.4),
+                    spreadRadius: 3,
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const WorkoutPage()),
-                    );
-                  },
-                  child: Text(
-                    'Workout',
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple[50],
-                    ),
+                ],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  textStyle: GoogleFonts.abrilFatface(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const WorkoutPage()),
+                  );
+                },
+                child: Text(
+                  'Workout',
+                  style: GoogleFonts.abrilFatface(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: Colors.deepPurple[50],
                   ),
                 ),
               ),
             ),
 
             // Set Goals button
-            Center(
-              child: Container(
-                width: 300,
-                height: 100,
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.4),
-                      spreadRadius: 3,
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    textStyle: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+            Container(
+              width: 300,
+              height: 100,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepPurple.withOpacity(0.4),
+                    spreadRadius: 3,
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const SetGoalsPage()),
-                    );
-                  },
-                  child: Text(
-                    'Set Goals',
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple[50],
-                    ),
+                ],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  textStyle: GoogleFonts.abrilFatface(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SetGoalsPage()),
+                  );
+                },
+                child: Text(
+                  'Set Goals',
+                  style: GoogleFonts.abrilFatface(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: Colors.deepPurple[50],
                   ),
                 ),
               ),
@@ -141,6 +149,9 @@ class MyHomePage extends StatelessWidget {
   }
 }
 
+
+// ------------------ Set Goals Page ------------------
+
 class SetGoalsPage extends StatelessWidget {
   const SetGoalsPage({super.key});
 
@@ -148,24 +159,40 @@ class SetGoalsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Set Goals'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: const Center(
-        child: Text(
-          'goals entered here, and injuries',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: true, // show back arrow
+        toolbarHeight: 250,
+        flexibleSpace: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
           ),
-          textAlign: TextAlign.center,
+          child: Image.asset(
+            'assets/rectanglelogo.png',
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(
+          child: Text(
+            'goals entered here, and injuries',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
     );
   }
 }
 
+// ------------------ Workout Page ------------------
 
 class WorkoutPage extends StatelessWidget {
   const WorkoutPage({super.key});
@@ -174,18 +201,29 @@ class WorkoutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Workout'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: true, // show back arrow
+        toolbarHeight: 250,
+        flexibleSpace: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+          child: Image.asset(
+            'assets/rectanglelogo.png',
+            fit: BoxFit.cover,
+          ),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Welcome to your workout! 💪',
-              style: TextStyle(
+              style: GoogleFonts.abrilFatface(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.deepPurple,
@@ -212,7 +250,6 @@ class WorkoutPage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
