@@ -1,9 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # Miscellaneous
 *.class
 *.log
-*.pyc
 *.swp
-.DS_Store
 .atom/
 .build/
 .buildlog/
@@ -31,7 +43,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/coverage/
+coverage/
 
 # Symbolication related
 app.*.symbols
@@ -39,7 +51,7 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
