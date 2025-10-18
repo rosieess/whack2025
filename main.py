@@ -8,7 +8,7 @@ app = FastAPI(title="AI Fitness Planner API")
 # Allow mobile apps (Flutter) to call it
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your app’s domain
+    allow_origins=["*"],  # In production, replace with your app's domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,5 +27,10 @@ async def generate_plan(req: GoalRequest):
     """
     Accepts user_input and returns a structured workout plan from Gemini.
     """
+    print(f"\n🎯 Received goal from Flutter app: {req.user_input}\n")
+    
     plan = generate_workout_plan(req.user_input)
+    
+    print(f"✅ Generated plan with {len(plan.get('weeks', []))} weeks\n")
+    
     return {"plan": plan}
