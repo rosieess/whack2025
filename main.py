@@ -1,5 +1,5 @@
 # main.py
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -10,6 +10,7 @@ from database import Database
 from auth_service import hash_password, verify_password, create_access_token, decode_access_token
 from workout_scheduler import generate_workout_plan
 from datetime import timedelta
+import datetime
 
 app = FastAPI()
 

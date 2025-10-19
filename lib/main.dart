@@ -10,6 +10,7 @@ void main() {
 // Global state to store the user's goal and auth
 class AppState extends ChangeNotifier {
   String _userGoal = 'Create a beginner full-body workout plan';
+  String _userInjury = 'No injuries this week :)';
   List<Exercise>? _cachedExercises;
   List<Exercise> _completedExercises = [];
   String? _authToken;
@@ -22,6 +23,7 @@ class AppState extends ChangeNotifier {
   String _workoutFeedback = '';
 
   String get userGoal => _userGoal;
+  String get userInjury => _userInjury;
   List<Exercise>? get cachedExercises => _cachedExercises;
   List<Exercise> get completedExercises => _completedExercises;
   String? get authToken => _authToken;
@@ -36,6 +38,11 @@ class AppState extends ChangeNotifier {
 
   void setGoal(String newGoal) {
     _userGoal = newGoal;
+    notifyListeners();
+  }
+
+  void setInjury(String newInjury) {
+    _userInjury = newInjury;
     notifyListeners();
   }
 
@@ -643,7 +650,7 @@ class Exercise {
   final String day;
   final String exercise;
   final int? sets;
-  final int? reps;
+  final dynamic reps;
   final String? notes;
 
   Exercise({
@@ -756,25 +763,6 @@ class MyHomePage extends StatelessWidget {
                   tooltip: 'Logout',
                 ),
               ),
-              if (appState.username != null)
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  child: Text(
-                    'Welcome, ${appState.username}!',
-                    style: GoogleFonts.abrilFatface(
-                      fontSize: 24,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: const Offset(2, 2),
-                          blurRadius: 4,
-                          color: Colors.black.withOpacity(0.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -897,8 +885,11 @@ class SetGoalsPage extends StatefulWidget {
 }
 
 class _SetGoalsPageState extends State<SetGoalsPage> {
-  bool isEditing = false;
+  bool isEditingGoal = false;
+  bool isEditingInjury = false;
   late TextEditingController _goalController;
+  late TextEditingController _injuryController;
+  late TextEditingController _feedbackController;
   bool _isSaving = false;
   final List<String> _weekDays = [
     'Monday',
@@ -910,22 +901,40 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
     'Sunday'
   ];
 
+  // Pre-workout check-in state
+  String _preWorkoutMood = 'neutral';
+  double _sleepHours = 7.0;
+
+  // Post-workout check-in state
+  String _postWorkoutDifficulty = 'neutral';
+
   @override
   void initState() {
     super.initState();
     _goalController = TextEditingController();
+    _injuryController = TextEditingController();
+    _feedbackController = TextEditingController();
   }
 
   @override
   void dispose() {
     _goalController.dispose();
+    _injuryController.dispose();
+    _feedbackController.dispose();
     super.dispose();
   }
 
-  void _startEditing() {
+  void _startEditingGoal() {
     setState(() {
       _goalController.text = appState.userGoal;
-      isEditing = true;
+      isEditingGoal = true;
+    });
+  }
+
+  void _startEditingInjury() {
+    setState(() {
+      _injuryController.text = appState.userInjury;
+      isEditingInjury = true;
     });
   }
 
@@ -963,7 +972,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
       if (response.statusCode == 200) {
         appState.setGoal(_goalController.text.trim());
         setState(() {
-          isEditing = false;
+          isEditingGoal = false;
         });
         
         if (mounted) {
@@ -994,11 +1003,202 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
     }
   }
 
-  void _cancelEditing() {
+  Future<void> _saveInjury() async {
+    if (_injuryController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter injury information or write "none"'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      const url = 'http://127.0.0.1:8000/api/save_injury';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${appState.authToken}',
+        },
+        body: json.encode({
+          'injury_text': _injuryController.text.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        appState.setInjury(_injuryController.text.trim());
+        setState(() {
+          isEditingInjury = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Injury information saved! 🩹'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to save injury');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving injury: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  void _cancelEditingGoal() {
     setState(() {
-      isEditing = false;
+      isEditingGoal = false;
       _goalController.clear();
     });
+  }
+
+  void _cancelEditingInjury() {
+    setState(() {
+      isEditingInjury = false;
+      _injuryController.clear();
+    });
+  }
+
+  Future<void> _savePreWorkoutCheckIn() async {
+    try {
+      const url = 'http://127.0.0.1:8000/api/pre_workout_checkin';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${appState.authToken}',
+        },
+        body: json.encode({
+          'mood': _preWorkoutMood,
+          'sleep_hours': _sleepHours,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pre-workout check-in saved! 💪'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving check-in: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _savePostWorkoutCheckIn() async {
+    try {
+      const url = 'http://127.0.0.1:8000/api/post_workout_checkin';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${appState.authToken}',
+        },
+        body: json.encode({
+          'difficulty': _postWorkoutDifficulty,
+          'feedback': _feedbackController.text.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post-workout feedback saved! 🎉'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        _feedbackController.clear();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving feedback: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildMoodButton(String mood, IconData icon, String label, bool isPreWorkout) {
+    final isSelected = isPreWorkout 
+        ? _preWorkoutMood == mood 
+        : _postWorkoutDifficulty == mood;
+    
+    Color getColor() {
+      if (mood == 'happy' || mood == 'easy') return Colors.green;
+      if (mood == 'neutral') return Colors.orange;
+      return Colors.red;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isPreWorkout) {
+            _preWorkoutMood = mood;
+          } else {
+            _postWorkoutDifficulty = mood;
+          }
+        });
+      },
+      child: Container(
+        width: 58,
+        height: 100,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? getColor() : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: getColor(),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: isSelected ? Colors.white : getColor(),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : getColor(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1045,7 +1245,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: Colors.deepPurple, width: 2),
               ),
-              child: isEditing
+              child: isEditingGoal
                   ? Column(
                       children: [
                         TextField(
@@ -1070,7 +1270,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: _isSaving ? null : _cancelEditing,
+                              onPressed: _isSaving ? null : _cancelEditingGoal,
                               child: const Text(
                                 'Cancel',
                                 style: TextStyle(
@@ -1123,7 +1323,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(
-                            onPressed: _startEditing,
+                            onPressed: _startEditingGoal,
                             icon: const Icon(Icons.edit, size: 20),
                             label: const Text(
                               'Change Goal',
@@ -1239,23 +1439,338 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: Colors.deepPurple, width: 2),
               ),
-              child: Text(
-                'Coming soon: Add any injuries or limitations here',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
+              child: isEditingInjury
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller: _injuryController,
+                          maxLines: 3,
+                          autofocus: true,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Any injuries or limitations this week?',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: _isSaving ? null : _cancelEditingInjury,
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _isSaving ? null : _saveInjury,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Save',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appState.userInjury,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _startEditingInjury,
+                            icon: const Icon(Icons.edit, size: 20),
+                            label: const Text(
+                              'Update',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.deepPurple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ========== TWO BOXES SPLIT DOWN THE MIDDLE ==========
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // LEFT BOX: PRE-WORKOUT CHECK-IN
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.blue, width: 2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.wb_sunny, color: Colors.blue[700], size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pre-Workout',
+                              style: GoogleFonts.abrilFatface(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Mood Selection
+                        Text(
+                          'How are you feeling?',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildMoodButton('happy', Icons.sentiment_very_satisfied, 'Great', true),
+                            _buildMoodButton('neutral', Icons.sentiment_neutral, 'OK', true),
+                            _buildMoodButton('sad', Icons.sentiment_dissatisfied, 'Tired', true),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Sleep Slider
+                        Text(
+                          'Hours of sleep last night',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Slider(
+                                value: _sleepHours,
+                                min: 0,
+                                max: 12,
+                                divisions: 24,
+                                label: '${_sleepHours.toStringAsFixed(1)}h',
+                                activeColor: Colors.blue[700],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _sleepHours = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        Center(
+                          child: Text(
+                            '${_sleepHours.toStringAsFixed(1)} hours',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Save Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _savePreWorkoutCheckIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              'Save Check-In',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                
+                const SizedBox(width: 16),
+                
+                // RIGHT BOX: POST-WORKOUT CHECK-IN
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.green, width: 2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.fitness_center, color: Colors.green[700], size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Post-Workout',
+                              style: GoogleFonts.abrilFatface(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Difficulty Selection
+                        Text(
+                          'How was the workout?',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildMoodButton('easy', Icons.sentiment_satisfied, 'Easy', false),
+                            _buildMoodButton('neutral', Icons.sentiment_neutral, 'Good', false),
+                            _buildMoodButton('hard', Icons.sentiment_very_dissatisfied, 'Hard', false),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Feedback Text Input
+                        Text(
+                          'Feedback (optional)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _feedbackController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'How did you feel? Any notes...',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.all(12),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Save Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _savePostWorkoutCheckIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              'Save Feedback',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-}
-
-// ------------------ Workout Page ------------------
+}// ------------------ Workout Page ------------------
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});
