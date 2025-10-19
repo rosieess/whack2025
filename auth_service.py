@@ -1,23 +1,27 @@
 # auth_service.py
-from passlib.context import CryptContext
+# ⚠️ WARNING: This removes all password security!
+# ⚠️ ONLY use for local testing - NEVER in production!
+
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 import os
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-secret-key-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production-123456")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
 def hash_password(password: str) -> str:
-    """Convert 'mypassword123' into unreadable hash for security"""
-    return pwd_context.hash(password)
+    """Store password as plain text (NO SECURITY!)"""
+    return password
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Check if password matches the hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, stored_password: str) -> bool:
+    """Check if passwords match exactly"""
+    try:
+        return plain_password == stored_password
+    except Exception as e:
+        print(f"❌ Password verification error: {e}")
+        return False
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a token that proves user is logged in"""
@@ -35,5 +39,6 @@ def decode_access_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except JWTError as e:
+        print(f"❌ JWT decode error: {e}")
         return None
